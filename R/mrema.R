@@ -10,7 +10,6 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   ## threshold max for middle component
   comp1_var_max <- seq(0, 1, by = 0.00001)
   comp1_var_max <- comp1_var_max[which(stats::pnorm(log2(threshold), 0, sqrt(comp1_var_max)) < 0.975)[1]]
-  print(comp1_var_max)
 
   # fit ggm to all genes without regard for set membership
   starting.params <- list("param" = list("mu" = c(0, log2(threshold) + 1, -log2(threshold) - 1), "var" = c(0.5, 0.5, 0.5), "alpha" = c(0.8, 0.1, 0.1)))
@@ -130,12 +129,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   res$ADJ.PVAL <- stats::p.adjust(res$PVAL, method = "BH", n = nrow(res))
   rownames(res) <- NULL
   detected_gene_sets <- res
-  all <- t(data.frame(rep(c(all_genes_mixture$param$mu, all_genes_mixture$param$var, all_genes_mixture$param$alpha), 2)))
-  colnames(all) <- colnames(parameters)
-  parameters <- rbind(parameters, all)
-  # print(dim(parameters))
-  # print(dim(res))
-  rownames(parameters) <- c(res$GENE.SET, "All Genes")
+  rownames(parameters) <- res$GENE.SET
   list("results" = detected_gene_sets, "parameters" = parameters)
 
   # if(is.null(params) == TRUE) return(detected_gene_sets) else return(parameters_h1)
@@ -195,11 +189,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         parameters_h1 <- list("Gene.Set" = inset_parameters, "Backround" = outset_parameters)
 
         # compare the two models
-        teststat <- 2*(-loglike_set_genes - (-loglike_Inset_genes-loglike_Outset_genes))
+        teststat <- 2*(-loglike_all_genes - (-loglike_Inset_genes-loglike_Outset_genes))
         pval <- stats::pchisq(teststat,df=6,lower.tail=FALSE)
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 12 * log(nrow(postdata)) - 2 * (loglike_Inset_genes + loglike_Outset_genes)
         v <- pval
+        print(pval)
         nonDE_criterion <- inset_parameters$alpha[1] < outset_parameters$alpha[1]
         weight_diff <- (outset_parameters$alpha[1] - inset_parameters$alpha[1])
         tol <- length(raw.gs[[j]])
@@ -218,7 +213,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        teststat <- 2*(-loglike_all_genes - (-loglike_set_genes))
         pval <- stats::pchisq(teststat,df=2,lower.tail=FALSE)
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 8 * log(nrow(postdata)) - 2 * (loglike_set_genes)
@@ -243,9 +238,8 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        teststat <- 2*(-loglike_all_genes - (-loglike_set_genes))
         pval <- stats::pchisq(teststat,df=4,lower.tail=FALSE)
-
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 10 * log(nrow(postdata)) - 2 * (loglike_set_genes)
         parameters_h1 <- set_parameters
