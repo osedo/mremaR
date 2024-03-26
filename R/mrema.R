@@ -1,5 +1,5 @@
 mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL, threshold = NULL, ncores = NULL, overlap = 0.25) {
-  postdata <- postdata[complete.cases(postdata), ]
+  postdata <- postdata[stats::complete.cases(postdata), ]
   effect <- dplyr::pull(postdata, 2)
   variance <- dplyr::pull(postdata, 3)
   if (is.null(set_number) == FALSE) {
@@ -9,7 +9,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
 
   ## threshold max for middle component
   comp1_var_max <- seq(0, 1, by = 0.00001)
-  comp1_var_max <- comp1_var_max[which(pnorm(log2(threshold), 0, sqrt(comp1_var_max)) < 0.975)[1]]
+  comp1_var_max <- comp1_var_max[which(stats::pnorm(log2(threshold), 0, sqrt(comp1_var_max)) < 0.975)[1]]
   print(comp1_var_max)
 
   # fit ggm to all genes without regard for set membership
@@ -25,17 +25,17 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   } else if (ncores == 1) {
     res <- lapply(seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
   } else {
-    clust <- makeCluster(ncores)
-    clusterEvalQ(clust, {
+    clust <- parallel::makeCluster(ncores)
+    parallel::clusterEvalQ(clust, {
       library(dplyr)
       library(magrittr)
     })
-    clusterExport(clust, varlist = c(
+    parallel::clusterExport(clust, varlist = c(
       "raw.gs", "postdata", "DF", "comp1_var_max", "threshold", "overlap", "all_genes_mixture", "loglike_all_genes", "lower_bound",
       ".EM_4FP_fixed", ".e_step_set_iter_means", ".m_step_set_iter_means", ".m_step_set_iter_fixed_2DF", ".m_step_set_iter_fixed", ".e_step_set_iter", ".run.mrema", ".EM_6FP_fixed", ".EM_1FP_fixed", ".EM_2FP_fixed", ".e_step_iter", ".m_step_iter_fixed", "lr.test"
     ), envir = environment())
-    res <- parLapply(clust, seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
-    stopCluster(clust)
+    res <- parallel::parLapply(clust, seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
+    parallel::stopCluster(clust)
   }
 
   analysis.res <- unlist(res, recursive = FALSE)
@@ -127,7 +127,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     )
   }
   res <- do.call("rbind", analysis.res[which(names(analysis.res) == "test")])
-  res$ADJ.PVAL <- p.adjust(res$PVAL, method = "BH", n = nrow(res))
+  res$ADJ.PVAL <- stats::p.adjust(res$PVAL, method = "BH", n = nrow(res))
   rownames(res) <- NULL
   detected_gene_sets <- res
   all <- t(data.frame(rep(c(all_genes_mixture$param$mu, all_genes_mixture$param$var, all_genes_mixture$param$alpha), 2)))
@@ -148,32 +148,34 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       if (DF == 1) {
         ### run 1DF test
         set_specific_post <- postdata
-        set_specific_post$set <- ifelse(pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
-        effect_set <- pull(set_specific_post, 2)
-        variance_set <- pull(set_specific_post, 3)
+        set_specific_post$set <- ifelse(dplyr::pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
+        effect_set <- dplyr::pull(set_specific_post, 2)
+        variance_set <- dplyr::pull(set_specific_post, 3)
         set <- set_specific_post$set
         set_mixture <- .EM_1FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
         loglike_set_genes <- set_mixture$loglike
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        aa <- lr.test(-loglike_all_genes, -loglike_set_genes, alpha = 0.05, 1)
+        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        pval <- stats::pchisq(teststat,df=1,lower.tail=FALSE)
+
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 7 * log(nrow(postdata)) - 2 * (loglike_set_genes)
         parameters_h1 <- set_parameters
         nonDE_criterion <- set_parameters$alpha[1] < set_parameters$alpha[4]
         weight_diff <- (set_parameters$alpha[4] - set_parameters$alpha[1])
-        v <- aa$p.value[[1]]
+        v <- pval
         tol <- length(raw.gs[[j]])
         BIC <- BIC_set < BIC_all
         # progress(j, max.value = length(raw.gs))
       } else if (DF == 6) {
         ### run 6DF approach
         set_specific_post <- postdata
-        set_specific_post$set <- ifelse(pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
-        set_specific_post_in <- set_specific_post %>% filter(set == 1)
-        effect_inset <- pull(set_specific_post_in, 2)
-        variance_inset <- pull(set_specific_post_in, 3)
+        set_specific_post$set <- ifelse(dplyr::pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
+        set_specific_post_in <- set_specific_post %>% dplyr::filter(set == 1)
+        effect_inset <- dplyr::pull(set_specific_post_in, 2)
+        variance_inset <- dplyr::pull(set_specific_post_in, 3)
 
         # fit the gmm to the genes in the gene set
         inset_mixture <- .EM_6FP_fixed(effect_inset, variance_inset, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
@@ -181,9 +183,9 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         inset_parameters <- inset_mixture$param
 
         # get all genes in the outset
-        set_specific_post_out <- set_specific_post %>% filter(set == 0)
-        effect_outset <- pull(set_specific_post_out, 2)
-        variance_outset <- pull(set_specific_post_out, 3)
+        set_specific_post_out <- set_specific_post %>% dplyr::filter(set == 0)
+        effect_outset <- dplyr::pull(set_specific_post_out, 2)
+        variance_outset <- dplyr::pull(set_specific_post_out, 3)
 
         # fit the gmm to genes outside the gene set
         starting.params <- list("param" = list("mu" = c(0, log2(threshold) + 1, -log2(threshold) - 1), "var" = c(0.5, 0.5, 0.5), "alpha" = c(0.8, 0.1, 0.1)))
@@ -193,10 +195,11 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         parameters_h1 <- list("Gene.Set" = inset_parameters, "Backround" = outset_parameters)
 
         # compare the two models
-        aa <- lr.test(-loglike_all_genes, -(loglike_Inset_genes + loglike_Outset_genes), alpha = 0.05, 6)
+        teststat <- 2*(-loglike_set_genes - (-loglike_Inset_genes-loglike_Outset_genes))
+        pval <- stats::pchisq(teststat,df=6,lower.tail=FALSE)
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 12 * log(nrow(postdata)) - 2 * (loglike_Inset_genes + loglike_Outset_genes)
-        v <- aa$p.value[[1]]
+        v <- pval
         nonDE_criterion <- inset_parameters$alpha[1] < outset_parameters$alpha[1]
         weight_diff <- (outset_parameters$alpha[1] - inset_parameters$alpha[1])
         tol <- length(raw.gs[[j]])
@@ -206,22 +209,23 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       } else if (DF == 2) {
         ### run 2DF approach
         set_specific_post <- postdata
-        set_specific_post$set <- ifelse(pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
-        effect_set <- pull(set_specific_post, 2)
-        variance_set <- pull(set_specific_post, 3)
+        set_specific_post$set <- ifelse(dplyr::pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
+        effect_set <- dplyr::pull(set_specific_post, 2)
+        variance_set <- dplyr::pull(set_specific_post, 3)
         set <- set_specific_post$set
         set_mixture <- .EM_2FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
         loglike_set_genes <- set_mixture$loglike
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        aa <- lr.test(-loglike_all_genes, -loglike_set_genes, alpha = 0.05, 2)
+        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        pval <- stats::pchisq(teststat,df=2,lower.tail=FALSE)
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 8 * log(nrow(postdata)) - 2 * (loglike_set_genes)
         parameters_h1 <- set_parameters
         nonDE_criterion <- set_parameters$alpha[1] < set_parameters$alpha[4]
         weight_diff <- (set_parameters$alpha[4] - set_parameters$alpha[1])
-        v <- aa$p.value[[1]]
+        v <- pval
         tol <- length(raw.gs[[j]])
         BIC <- BIC_set < BIC_all
         # progress(j, max.value = length(raw.gs))
@@ -229,9 +233,9 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         # print("Running 4 DF")
         ### run 2DF approach
         set_specific_post <- postdata
-        set_specific_post$set <- ifelse(pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
-        effect_set <- pull(set_specific_post, 2)
-        variance_set <- pull(set_specific_post, 3)
+        set_specific_post$set <- ifelse(dplyr::pull(postdata, 1) %in% raw.gs[[j]], 1, 0)
+        effect_set <- dplyr::pull(set_specific_post, 2)
+        variance_set <- dplyr::pull(set_specific_post, 3)
         set <- set_specific_post$set
         set_mixture <- .EM_4FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
         # print(set_mixture)
@@ -239,15 +243,16 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        aa <- lr.test(-loglike_all_genes, -loglike_set_genes, alpha = 0.05, 2)
-        # print(aa)
+        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        pval <- stats::pchisq(teststat,df=4,lower.tail=FALSE)
+
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 10 * log(nrow(postdata)) - 2 * (loglike_set_genes)
         parameters_h1 <- set_parameters
 
         nonDE_criterion <- set_parameters$alpha[1] < set_parameters$alpha[4]
         weight_diff <- (set_parameters$alpha[4] - set_parameters$alpha[1])
-        v <- aa$p.value[[1]]
+        v <- pval
         tol <- length(raw.gs[[j]])
         BIC <- BIC_set < BIC_all
       }
@@ -292,7 +297,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       }
     }
   }
-  loglike_all_genes <- tail(loglik.vector, n = 1)
+  loglike_all_genes <- utils::tail(loglik.vector, n = 1)
   parameters <- list("loglike" = loglike_all_genes, "param" = m.step)
   return(parameters)
 }
@@ -327,7 +332,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     }
   }
 
-  loglike_set_genes <- tail(loglik.vector.set, n = 1)
+  loglike_set_genes <- utils::tail(loglik.vector.set, n = 1)
   parameters <- list("loglike" = loglike_set_genes, "param" = m.step.set, "ll.vector" = loglik.vector.set)
   return(parameters)
 }
@@ -363,7 +368,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     }
   }
 
-  loglike_set_genes <- tail(loglik.vector.set, n = 1)
+  loglike_set_genes <- utils::tail(loglik.vector.set, n = 1)
   parameters <- list("loglike" = loglike_set_genes, "param" = m.step.set, "ll.vector" = loglik.vector.set)
   return(parameters)
 }
@@ -375,9 +380,9 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
 .e_step_iter <- function(x, lfc_var, mu_vector, component_var, alpha_vector) {
   # both lfc_se and component_var contribute to total variance
 
-  comp1_prod <- dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1]
-  comp2_prod <- dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2]
-  comp3_prod <- dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3]
+  comp1_prod <- stats::dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1]
+  comp2_prod <- stats::dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2]
+  comp3_prod <- stats::dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3]
 
   sum_of_comps <- comp1_prod + comp2_prod + comp3_prod
   sum_of_comps[which(sum_of_comps == 0)] <- 1e-200
@@ -403,14 +408,14 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   # both sd_vector and sigma are variance
 
 
-  comp1_prod <- dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1] * set
-  comp2_prod <- dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2] * set
-  comp3_prod <- dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3] * set
+  comp1_prod <- stats::dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1] * set
+  comp2_prod <- stats::dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2] * set
+  comp3_prod <- stats::dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3] * set
   # posteiror dist for genes outside of the set
 
-  comp4_prod <- dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[4] * (1 - set)
-  comp5_prod <- dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[5] * (1 - set)
-  comp6_prod <- dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[6] * (1 - set)
+  comp4_prod <- stats::dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[4] * (1 - set)
+  comp5_prod <- stats::dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[5] * (1 - set)
+  comp6_prod <- stats::dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[6] * (1 - set)
 
   sum_of_comps1 <- comp1_prod + comp2_prod + comp3_prod
   sum_of_comps2 <- comp4_prod + comp5_prod + comp6_prod
@@ -452,14 +457,14 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   # both sd_vector and sigma are variance
 
 
-  comp1_prod <- dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1] * set
-  comp2_prod <- dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2] * set
-  comp3_prod <- dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3] * set
+  comp1_prod <- stats::dnorm(x, mu_vector[1], sqrt(component_var[1] + lfc_var)) * alpha_vector[1] * set
+  comp2_prod <- stats::dnorm(x, mu_vector[2], sqrt(component_var[2] + lfc_var)) * alpha_vector[2] * set
+  comp3_prod <- stats::dnorm(x, mu_vector[3], sqrt(component_var[3] + lfc_var)) * alpha_vector[3] * set
   # posteiror dist for genes outside of the set
 
-  comp4_prod <- dnorm(x, mu_vector[4], sqrt(component_var[1] + lfc_var)) * alpha_vector[4] * (1 - set)
-  comp5_prod <- dnorm(x, mu_vector[5], sqrt(component_var[2] + lfc_var)) * alpha_vector[5] * (1 - set)
-  comp6_prod <- dnorm(x, mu_vector[6], sqrt(component_var[3] + lfc_var)) * alpha_vector[6] * (1 - set)
+  comp4_prod <- stats::dnorm(x, mu_vector[4], sqrt(component_var[1] + lfc_var)) * alpha_vector[4] * (1 - set)
+  comp5_prod <- stats::dnorm(x, mu_vector[5], sqrt(component_var[2] + lfc_var)) * alpha_vector[5] * (1 - set)
+  comp6_prod <- stats::dnorm(x, mu_vector[6], sqrt(component_var[3] + lfc_var)) * alpha_vector[6] * (1 - set)
 
   sum_of_comps1 <- comp1_prod + comp2_prod + comp3_prod
   sum_of_comps2 <- comp4_prod + comp5_prod + comp6_prod
@@ -511,13 +516,13 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       comp2_var <- component_var[2]
       w2_i <- 1 / (comp2_var + lfc_var)
 
-      comp2_mean_min <- qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(posterior_df[, 2] * w2_i * x) / sum(posterior_df[, 2] * w2_i))
       comp5_mu <- max(comp2_mean_min, sum(posterior_df[, 5] * w2_i * x) / sum(posterior_df[, 5] * w2_i))
 
       comp3_var <- component_var[3]
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(posterior_df[, 3] * w3_i * x) / sum(posterior_df[, 3] * w3_i))
       comp6_mu <- min(comp3_mean_max, sum(posterior_df[, 6] * w3_i * x) / sum(posterior_df[, 6] * w3_i))
 
@@ -528,13 +533,13 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     } else {
       comp2_var <- max(0.005, (sum(posterior_df[, 2] * ((w2_i)^2) * (((x - comp2_mu)^2) - lfc_var)) + sum(posterior_df[, 5] * ((w2_i)^2) * (((x - comp5_mu)^2) - lfc_var))) * (1 / sum((posterior_df[, 2] + posterior_df[, 5]) * w2_i^2)))
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(posterior_df[, 2] * w2_i * x) / sum(posterior_df[, 2] * w2_i))
       comp5_mu <- max(comp2_mean_min, sum(posterior_df[, 5] * w2_i * x) / sum(posterior_df[, 5] * w2_i))
 
       comp3_var <- max(0.005, (sum(posterior_df[, 3] * ((w3_i)^2) * (((x - comp3_mu)^2) - lfc_var)) + sum(posterior_df[, 6] * ((w3_i)^2) * (((x - comp6_mu)^2) - lfc_var))) * (1 / sum((posterior_df[, 3] + posterior_df[, 6]) * w3_i^2)))
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(posterior_df[, 3] * w3_i * x) / sum(posterior_df[, 3] * w3_i))
       comp6_mu <- min(comp3_mean_max, sum(posterior_df[, 6] * w3_i * x) / sum(posterior_df[, 6] * w3_i))
 
@@ -575,7 +580,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       w2_i <- 1 / (comp2_var + lfc_var)
 
       # gets the mininum mean allowed when variance is comp2_var to keep 75% of the distribution above threshold
-      comp2_mean_min <- qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
       ## use either minimum value or mean estimate if bigger
       comp2_mu <- max(comp2_mean_min, sum(posterior_df[, 2] * w2_i * x) / sum(posterior_df[, 2] * w2_i))
 
@@ -583,7 +588,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
       ## weights
       w3_i <- 1 / (comp3_var + lfc_var)
       # gets the maximum mean allowed when variance is comp3_var to keep 75% of the distribution below threshold
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       ## use either maximum value or mean estimate if smaller
       comp3_mu <- min(comp3_mean_max, sum(posterior_df[, 3] * w3_i * x) / sum(posterior_df[, 3] * w3_i))
 
@@ -593,12 +598,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     } else {
       comp2_var <- max(0.005, sum(posterior_df[, 2] * ((w2_i)^2) * (((x - comp2_mu)^2) - lfc_var)) / (sum(posterior_df[, 2] * w2_i^2)))
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(posterior_df[, 2] * w2_i * x) / sum(posterior_df[, 2] * w2_i))
 
       comp3_var <- max(0.005, sum(posterior_df[, 3] * ((w3_i)^2) * (((x - comp3_mu)^2) - lfc_var)) / (sum(posterior_df[, 3] * w3_i^2)))
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(posterior_df[, 3] * w3_i * x) / sum(posterior_df[, 3] * w3_i))
 
       comp1_var <- comp1_var_max
@@ -651,12 +656,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     if (i == 1) {
       comp2_var <- component_var[2]
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(comp2_pd * w2_i * x) / sum(comp2_pd * w2_i))
 
       comp3_var <- component_var[3]
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(comp3_pd * w3_i * x) / sum(comp3_pd * w3_i))
 
       comp1_var <- comp1_var_max
@@ -665,12 +670,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     } else {
       comp2_var <- max(0.005, sum(comp2_pd * ((w2_i)^2) * (((x - comp2_mu)^2) - lfc_var)) / (sum(comp2_pd * w2_i^2)))
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(comp2_pd * w2_i * x) / sum(comp2_pd * w2_i))
 
       comp3_var <- max(0.005, sum(comp3_pd * ((w3_i)^2) * (((x - comp3_mu)^2) - lfc_var)) / (sum(comp3_pd * w3_i^2)))
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(comp3_pd * w3_i * x) / sum(comp3_pd * w3_i))
 
       comp1_var <- comp1_var_max
@@ -725,7 +730,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     }
   }
 
-  loglike_set_genes <- tail(loglik.vector.set, n = 1)
+  loglike_set_genes <- utils::tail(loglik.vector.set, n = 1)
   parameters <- list("loglike" = loglike_set_genes, "param" = m.step.set, "ll.vector" = loglik.vector.set)
   return(parameters)
 }
@@ -752,12 +757,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     if (i == 1) {
       comp2_var <- component_var[2]
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm(1 - overlap, log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(comp2_pd * w2_i * x) / sum(comp2_pd * w2_i))
 
       comp3_var <- component_var[3]
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(comp3_pd * w3_i * x) / sum(comp3_pd * w3_i))
 
       comp1_var <- comp1_var_max
@@ -766,12 +771,12 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
     } else {
       comp2_var <- max(0.005, sum(comp2_pd * ((w2_i)^2) * (((x - comp2_mu)^2) - lfc_var)) / (sum(comp2_pd * w2_i^2)))
       w2_i <- 1 / (comp2_var + lfc_var)
-      comp2_mean_min <- qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
+      comp2_mean_min <- stats::qnorm((1 - overlap), log2(threshold), sqrt(comp2_var))
       comp2_mu <- max(comp2_mean_min, sum(comp2_pd * w2_i * x) / sum(comp2_pd * w2_i))
 
       comp3_var <- max(0.005, sum(comp3_pd * ((w3_i)^2) * (((x - comp3_mu)^2) - lfc_var)) / (sum(comp3_pd * w3_i^2)))
       w3_i <- 1 / (comp3_var + lfc_var)
-      comp3_mean_max <- qnorm(overlap, -log2(threshold), sqrt(comp3_var))
+      comp3_mean_max <- stats::qnorm(overlap, -log2(threshold), sqrt(comp3_var))
       comp3_mu <- min(comp3_mean_max, sum(comp3_pd * w3_i * x) / sum(comp3_pd * w3_i))
 
       comp1_var <- comp1_var_max
