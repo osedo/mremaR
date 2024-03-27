@@ -14,9 +14,18 @@
 
 
 mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, overlap = 0.25) {
+  # remove genes with na values
   postdata <- postdata[stats::complete.cases(postdata), ]
+  # get effect sizes and variance
   effect <- dplyr::pull(postdata, 2)
   variance <- dplyr::pull(postdata, 3)
+
+  # remove gene sets with very low number of genes in dataset
+
+  raw.gs <- raw.gs[unlist(lapply(raw.gs, function(i){
+    sum(i %in% dplyr::pull(postdata, 1))
+  })) >= 5]
+  if(length(raw.gs) < 1) stop("No gene sets with more than 5 genes present in data.")
 
   ## threshold max for middle component
   comp1_var_max <- seq(0, 1, by = 0.00001)

@@ -40,3 +40,8 @@ test_that("mrema output on test.set", {
   expect_equal(res$results$PVAL,  4.373173e-05, tolerance = "6e")
 
 })
+
+
+test_that("mrema error tests", {
+  expect_error(mrema(postdata = test.set$postdata, raw.gs = list("smally" = c(paste0("gene.", 1:3))), DF = 6, threshold = 1.25), "No gene sets with more than 5 genes present in data.")
+})
