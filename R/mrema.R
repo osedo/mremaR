@@ -21,18 +21,25 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   variance <- dplyr::pull(postdata, 3)
 
   # remove gene sets with very low number of genes in dataset
-
   raw.gs <- raw.gs[unlist(lapply(raw.gs, function(i){
     sum(i %in% dplyr::pull(postdata, 1))
   })) >= 5]
   if(length(raw.gs) < 1) stop("No gene sets with more than 5 genes present in data.")
 
   ## threshold max for middle component
-  comp1_var_max <- seq(0, 1, by = 0.00001)
+  comp1_var_max <- seq(0, 5, by = 0.00001)
   comp1_var_max <- comp1_var_max[which(stats::pnorm(log2(threshold), 0, sqrt(comp1_var_max)) < 0.975)[1]]
 
+  # get initial estimates of params from data
+  alpha_3 <- sum(stats::pnorm(-log2(threshold), effect, sqrt(variance), lower.tail = TRUE))/nrow(postdata)
+  alpha_2 <- sum(stats::pnorm(log2(threshold), effect, sqrt(variance), lower.tail = FALSE))/nrow(postdata)
+  alpha_1 <- 1 - (alpha_2 + alpha_3)
+  mu2 <- mean(effect[effect >= log2(threshold)])
+  mu3 <- mean(effect[effect <= -log2(threshold)])
+  mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
+  mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
   # fit ggm to all genes without regard for set membership
-  starting.params <- list("param" = list("mu" = c(0, log2(threshold) + 1, -log2(threshold) - 1), "var" = c(0.5, 0.5, 0.5), "alpha" = c(0.8, 0.1, 0.1)))
+  starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, 0.5, 0.5), "alpha" = c(alpha_1, alpha_2, alpha_3)))
   # print(starting.params)
   all_genes_mixture <- .EM_6FP_fixed(effect, variance, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
 
@@ -190,7 +197,17 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         variance_inset <- dplyr::pull(set_specific_post_in, 3)
 
         # fit the gmm to the genes in the gene set
-        inset_mixture <- .EM_6FP_fixed(effect_inset, variance_inset, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
+        # get initial estimates of params from data
+        alpha_3 <- sum(stats::pnorm(-log2(threshold), effect_inset, sqrt(variance_inset), lower.tail = TRUE))/length(effect_inset)
+        alpha_2 <- sum(stats::pnorm(log2(threshold), effect_inset, sqrt(variance_inset), lower.tail = FALSE))/length(effect_inset)
+        alpha_1 <- 1 - (alpha_2 + alpha_3)
+        mu2 <- mean(effect_inset[effect_inset >= log2(threshold)])
+        mu3 <- mean(effect_inset[effect_inset <= -log2(threshold)])
+        mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
+        mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
+        # fit ggm to all genes without regard for set membership
+        starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, 0.5, 0.5), "alpha" = c(alpha_1, alpha_2, alpha_3)))
+        inset_mixture <- .EM_6FP_fixed(effect_inset, variance_inset, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
         loglike_Inset_genes <- inset_mixture$loglike
         inset_parameters <- inset_mixture$param
 
@@ -404,8 +421,6 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
 
   sum_of_comps_ln <- log(sum_of_comps, base = exp(1))
   sum_of_comps_ln_sum <- sum(sum_of_comps_ln)
-
-
 
   list(
     "loglik" = sum_of_comps_ln_sum,
