@@ -1,11 +1,22 @@
-mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL, threshold = NULL, ncores = NULL, overlap = 0.25) {
+#' Run gene set analysis using Mixture of Random-Effects Meta-Analysis
+#'
+#' @param postdata A three column dataframe with columns corresponding to gene name, lfc and lfc variance, respectively
+#' @param raw.gs A list of named gene sets.
+#' @param DF Degrees of freedom between the null and alternative hypotheses.
+#' @param threshold The foldchange above which a gene is considered differentially expressed.
+#' @param ncores The number of cores to use for parallel computing. Defaults to 1.
+#' @param overlap The proportion of the DE normal distributions. Defaults to 0.25
+#'
+#' @returns A list of two dataframes, results containing the results of the tests and parameters containing the parameters of the distribution of the gene set log fold changes.
+#'
+#'
+#'
+
+
+mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, overlap = 0.25) {
   postdata <- postdata[stats::complete.cases(postdata), ]
   effect <- dplyr::pull(postdata, 2)
   variance <- dplyr::pull(postdata, 3)
-  if (is.null(set_number) == FALSE) {
-    set_name <- names(raw.gs[set_number])
-    raw.gs <- raw.gs[which(names(raw.gs) == set_name)]
-  }
 
   ## threshold max for middle component
   comp1_var_max <- seq(0, 1, by = 0.00001)
@@ -19,9 +30,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
   loglike_all_genes <- all_genes_mixture$loglike
 
 
-  if (is.null(ncores) == TRUE) {
-    res <- lapply(seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
-  } else if (ncores == 1) {
+  if (ncores == 1) {
     res <- lapply(seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
   } else {
     clust <- parallel::makeCluster(ncores)
@@ -795,3 +804,15 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
 
 
 lower_bound <- 0.000000005
+
+
+#'#' This is data to be included in my package
+#'
+#' @name data-test.set
+#' @docType data
+#' @description
+#' A list containing a dataframe of genes, effect sizes and effect size variances, and a list with a single gene set.
+#' Access using test.set$postdata and test.set$gs respectively. This data is used to carry out tests of the mrema function.
+#'
+#' @keywords data
+"test.set"
