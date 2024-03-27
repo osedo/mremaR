@@ -151,7 +151,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
         # compare the two models
-        teststat <- 2*(-loglike_set_genes - (-loglike_all_genes))
+        teststat <- 2*(-loglike_all_genes - (-loglike_set_genes))
         pval <- stats::pchisq(teststat,df=1,lower.tail=FALSE)
 
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
@@ -194,7 +194,7 @@ mrema <- function(postdata, raw.gs, set_number = NULL, DF = NULL, params = NULL,
         BIC_all <- 6 * log(nrow(postdata)) - 2 * loglike_all_genes
         BIC_set <- 12 * log(nrow(postdata)) - 2 * (loglike_Inset_genes + loglike_Outset_genes)
         v <- pval
-        print(pval)
+       # print(pval)
         nonDE_criterion <- inset_parameters$alpha[1] < outset_parameters$alpha[1]
         weight_diff <- (outset_parameters$alpha[1] - inset_parameters$alpha[1])
         tol <- length(raw.gs[[j]])
