@@ -40,9 +40,9 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
   # fit ggm to all genes without regard for set membership
   starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, 0.5, 0.5), "alpha" = c(alpha_1, alpha_2, alpha_3)))
-  # print(starting.params)
+   print(starting.params)
   all_genes_mixture <- .EM_6FP_fixed(effect, variance, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
-
+  print(all_genes_mixture)
   loglike_all_genes <- all_genes_mixture$loglike
 
 
@@ -56,7 +56,7 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
     })
     parallel::clusterExport(clust, varlist = c(
       "raw.gs", "postdata", "DF", "comp1_var_max", "threshold", "overlap", "all_genes_mixture", "loglike_all_genes", "lower_bound",
-      ".EM_4FP_fixed", ".e_step_set_iter_means", ".m_step_set_iter_means", ".m_step_set_iter_fixed_2DF", ".m_step_set_iter_fixed", ".e_step_set_iter", ".run.mrema", ".EM_6FP_fixed", ".EM_1FP_fixed", ".EM_2FP_fixed", ".e_step_iter", ".m_step_iter_fixed", "lr.test"
+      ".EM_4FP_fixed", ".e_step_set_iter_means", ".m_step_set_iter_means", ".m_step_set_iter_fixed_2DF", ".m_step_set_iter_fixed", ".e_step_set_iter", ".run.mrema", ".EM_6FP_fixed", ".EM_1FP_fixed", ".EM_2FP_fixed", ".e_step_iter", ".m_step_iter_fixed"
     ), envir = environment())
     res <- parallel::parLapply(clust, seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
     parallel::stopCluster(clust)
@@ -840,3 +840,15 @@ lower_bound <- 0.000000005
 #'
 #' @keywords data
 "test.set"
+
+
+#'#' This is data to be included in my package
+#'
+#' @name data-em.tests
+#' @docType data
+#' @description
+#' A list containing a dataframe of genes, effect sizes and effect size variances, and a list with a single gene set.
+#' Access using em.tests$postdata and em.tests$gs respectively. This data is used to carry out tests of the mrema function.
+#'
+#' @keywords data
+"em.tests"
