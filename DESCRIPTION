@@ -26,8 +26,12 @@ Imports:
     stats,
     utils
 Suggests: 
-    testthat (>= 3.0.0)
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    CARseq
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)
 LazyData: true
+VignetteBuilder: knitr

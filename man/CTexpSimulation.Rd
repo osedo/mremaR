@@ -34,6 +34,7 @@ A list with the following objects:
 \item true.mixture - a n X k matrix of true cell type proportions.
 \item ct.reference - a g X k matrix of reference values for cell type specific expression
 \item simulated.lfc - a g X k matrix of simulated lfc in each cell type.
+\item trait - a n X 1 dataframe containing trait information
 }
 }
 \description{

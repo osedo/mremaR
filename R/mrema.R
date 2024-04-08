@@ -40,9 +40,9 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
   # fit ggm to all genes without regard for set membership
   starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, 0.5, 0.5), "alpha" = c(alpha_1, alpha_2, alpha_3)))
-   print(starting.params)
+
   all_genes_mixture <- .EM_6FP_fixed(effect, variance, comp1_var_max = comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
-  print(all_genes_mixture)
+
   loglike_all_genes <- all_genes_mixture$loglike
 
 
@@ -311,14 +311,14 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
       # Initialization
       e.step <- .e_step_iter(effect, variance, starting$param$mu, starting$param$var, c(starting$param$alpha))
       m.step <- .m_step_iter_fixed(effect, variance, starting$param$var, iter, e.step[["posterior_df"]], comp1_var_max, threshold, overlap = overlap)
-      print(m.step)
+
       cur.loglik <- e.step[["loglik"]]
       loglik.vector <- e.step[["loglik"]]
     } else {
       # Repeat E and M steps till convergence
       e.step <- .e_step_iter(effect, variance, m.step[["mu"]], m.step[["var"]], m.step[["alpha"]])
       m.step <- .m_step_iter_fixed(effect, variance, m.step[["var"]], iter, e.step[["posterior_df"]], comp1_var_max, threshold, overlap = overlap)
-      print(m.step)
+
       loglik.vector <- c(loglik.vector, e.step[["loglik"]])
       loglik.diff <- abs((cur.loglik - e.step[["loglik"]]))
       if (loglik.diff < m) {

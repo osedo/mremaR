@@ -15,7 +15,7 @@
 #'  3) true.mixture - a n X k matrix of true cell type proportions.
 #'  4) ct.reference - a g X k matrix of reference values for cell type specific expression
 #'  5) simulated.lfc - a g X k matrix of simulated lfc in each cell type.
-#'
+#'  6) trait - a n X 1 dataframe containing trait information
 
 
 CTexpSimulation <- function(g = 1000, n = 200, p = 0.05, m_lfc = 4, sd_lfc = 0.2, parameters = simulation.parameters){
@@ -83,11 +83,11 @@ CTexpSimulation <- function(g = 1000, n = 200, p = 0.05, m_lfc = 4, sd_lfc = 0.2
   colnames(y_gxn) <- paste0("sample.", c(1:n))
   rownames(o_k) <- paste0("sample.", c(1:n))
   colnames(o_k) <- paste0("cellType.", c(1:k))
-  cov <- data.frame("trait" = as.factor(c(rep(0, n/2), rep(1,n/2))))
-  row.names(cov) <- paste0("sample.", c(1:n))
+  cov <- factor(c(rep(0, n/2), rep(1,n/2)))
+  names(cov) <- paste0("sample.", c(1:n))
 
   list("bulk.expression" = y_gxn, "ols.mixture.estimate" = o_hat_k, "true.mixture" = o_k,
-       "ct.reference" = x_controls_gxk,  "simulated.lfc" = simulated.lfc)
+       "ct.reference" = x_controls_gxk,  "simulated.lfc" = simulated.lfc, "trait" = cov)
 
 
 }

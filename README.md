@@ -6,7 +6,7 @@ An R package for implementing gene set analysis tests using a mixture of random-
  
  ```
     library("devtools");
-    install_github("doshea/mremaR")
+    install_github("osedo/mremaR")
  ```
  
  ## References
