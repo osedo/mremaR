@@ -12,11 +12,13 @@ RoxygenNote: 7.3.1
 URL: https://github.com/osedo/mremaR
 BugReports: https://github.com/osedo/mremaR/issues
 Imports: 
+    DirichletReg,
     dplyr,
     DT,
     esquisse,
     ggplot2,
     magrittr,
+    MASS,
     parallel,
     plotly,
     scales,

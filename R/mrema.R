@@ -55,7 +55,7 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
       library(magrittr)
     })
     parallel::clusterExport(clust, varlist = c(
-      "raw.gs", "postdata", "DF", "comp1_var_max", "threshold", "overlap", "all_genes_mixture", "loglike_all_genes", "lower_bound",
+      "raw.gs", "postdata", "DF", "comp1_var_max", "threshold", "overlap", "all_genes_mixture", "loglike_all_genes", "lower_bound", "tryCatch",
       ".EM_4FP_fixed", ".e_step_set_iter_means", ".m_step_set_iter_means", ".m_step_set_iter_fixed_2DF", ".m_step_set_iter_fixed", ".e_step_set_iter", ".run.mrema", ".EM_6FP_fixed", ".EM_1FP_fixed", ".EM_2FP_fixed", ".e_step_iter", ".m_step_iter_fixed"
     ), envir = environment())
     res <- parallel::parLapply(clust, seq_along(raw.gs), function(j) .run.mrema(j, raw.gs, postdata, DF, comp1_var_max, threshold, overlap, all_genes_mixture, loglike_all_genes))
@@ -311,12 +311,14 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
       # Initialization
       e.step <- .e_step_iter(effect, variance, starting$param$mu, starting$param$var, c(starting$param$alpha))
       m.step <- .m_step_iter_fixed(effect, variance, starting$param$var, iter, e.step[["posterior_df"]], comp1_var_max, threshold, overlap = overlap)
+      print(m.step)
       cur.loglik <- e.step[["loglik"]]
       loglik.vector <- e.step[["loglik"]]
     } else {
       # Repeat E and M steps till convergence
       e.step <- .e_step_iter(effect, variance, m.step[["mu"]], m.step[["var"]], m.step[["alpha"]])
       m.step <- .m_step_iter_fixed(effect, variance, m.step[["var"]], iter, e.step[["posterior_df"]], comp1_var_max, threshold, overlap = overlap)
+      print(m.step)
       loglik.vector <- c(loglik.vector, e.step[["loglik"]])
       loglik.diff <- abs((cur.loglik - e.step[["loglik"]]))
       if (loglik.diff < m) {
@@ -450,22 +452,22 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   sum_of_comps[which(sum_of_comps == 0)] <- 1e-200
 
   comp1_post <- comp1_prod / sum_of_comps1
-  comp1_post[is.na(comp1_post)] <- 0
+  comp1_post[is.na(comp1_post)] <-  1e-200
 
   comp2_post <- comp2_prod / sum_of_comps1
-  comp2_post[is.na(comp2_post)] <- 0
+  comp2_post[is.na(comp2_post)] <-  1e-200
 
   comp3_post <- comp3_prod / sum_of_comps1
-  comp3_post[is.na(comp3_post)] <- 0
+  comp3_post[is.na(comp3_post)] <-  1e-200
 
   comp4_post <- comp4_prod / sum_of_comps2
-  comp4_post[is.na(comp4_post)] <- 0
+  comp4_post[is.na(comp4_post)] <-  1e-200
 
   comp5_post <- comp5_prod / sum_of_comps2
-  comp5_post[is.na(comp5_post)] <- 0
+  comp5_post[is.na(comp5_post)] <-  1e-200
 
   comp6_post <- comp6_prod / sum_of_comps2
-  comp6_post[is.na(comp6_post)] <- 0
+  comp6_post[is.na(comp6_post)] <-  1e-200
 
   sum_of_comps_ln <- log(sum_of_comps, base = exp(1))
   sum_of_comps_ln_sum <- sum(sum_of_comps_ln)
@@ -499,22 +501,22 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   sum_of_comps[which(sum_of_comps == 0)] <- 1e-200
 
   comp1_post <- comp1_prod / sum_of_comps1
-  comp1_post[is.na(comp1_post)] <- 0
+  comp1_post[is.na(comp1_post)] <-  1e-200
 
   comp2_post <- comp2_prod / sum_of_comps1
-  comp2_post[is.na(comp2_post)] <- 0
+  comp2_post[is.na(comp2_post)] <-  1e-200
 
   comp3_post <- comp3_prod / sum_of_comps1
-  comp3_post[is.na(comp3_post)] <- 0
+  comp3_post[is.na(comp3_post)] <-  1e-200
 
   comp4_post <- comp4_prod / sum_of_comps2
-  comp4_post[is.na(comp4_post)] <- 0
+  comp4_post[is.na(comp4_post)] <-  1e-200
 
   comp5_post <- comp5_prod / sum_of_comps2
-  comp5_post[is.na(comp5_post)] <- 0
+  comp5_post[is.na(comp5_post)] <-  1e-200
 
   comp6_post <- comp6_prod / sum_of_comps2
-  comp6_post[is.na(comp6_post)] <- 0
+  comp6_post[is.na(comp6_post)] <-  1e-200
 
   sum_of_comps_ln <- log(sum_of_comps, base = exp(1))
   sum_of_comps_ln_sum <- sum(sum_of_comps_ln)

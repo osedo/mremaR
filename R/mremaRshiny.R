@@ -135,4 +135,4 @@ mremApp <- function(){
   shiny::shinyApp(ui = ui, server = server)
 }
 
-utils::globalVariables(c("LFC", "Density", "Set"))
+utils::globalVariables(c("LFC", "Density", "Set", "simulation.parameters"))
