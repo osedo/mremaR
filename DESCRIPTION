@@ -24,12 +24,12 @@ Imports:
     scales,
     shiny,
     stats,
-    utils, 
-    devtools
+    utils
 Suggests: 
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
+Remotes: git::https://github.com/Sun-lab/CARseq
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)
