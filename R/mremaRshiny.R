@@ -1,3 +1,8 @@
+#'
+#' Rshiny app to visualize the mrema() results
+#'
+#' @export
+
 mremApp <- function(){
 
   server <- function(input, output, session) {

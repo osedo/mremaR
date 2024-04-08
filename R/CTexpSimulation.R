@@ -16,7 +16,7 @@
 #'  4) ct.reference - a g X k matrix of reference values for cell type specific expression
 #'  5) simulated.lfc - a g X k matrix of simulated lfc in each cell type.
 #'  6) trait - a n X 1 dataframe containing trait information
-
+#' @export
 
 CTexpSimulation <- function(g = 1000, n = 200, p = 0.05, m_lfc = 4, sd_lfc = 0.2, parameters = simulation.parameters){
 

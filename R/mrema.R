@@ -11,7 +11,7 @@
 #'
 #'
 #'
-
+#' @export
 
 mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, overlap = 0.25) {
   # remove genes with na values

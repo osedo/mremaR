@@ -41,7 +41,7 @@ res <- run_CARseq(
   count_matrix = sim$bulk.expression,
   cellular_proportions = sim$ols.mixture.estimate,
   groups = sim$trait,
-  cores = 4
+  cores = 1
 )
 ```
 
