@@ -45,10 +45,12 @@ mremApp <- function(){
           set <- as.numeric(c(results()[[ct]]$parameters[rownames(results()[[ct]]$parameters) == gs,]))
           if(central()){
             y_geneset <- stats::dnorm(x, set[2], sqrt(set[5]))*set[8] + stats::dnorm(x, set[3], sqrt(set[6]))*set[9]
-          } else {
+            y_background <- stats::dnorm(x, set[11], sqrt(set[14]))*set[17] + stats::dnorm(x, set[12], sqrt(set[15]))*set[18]
+            } else {
             y_geneset <- stats::dnorm(x, set[1], sqrt(set[4]))*set[7] + stats::dnorm(x, set[2], sqrt(set[5]))*set[8] + stats::dnorm(x, set[3], sqrt(set[6]))*set[9]
-          }
-          data.frame("LFC" = c(x), "Density" = c(y_geneset), "Set" = c(rep(names(results())[ct], length(x))))
+            y_background <- stats::dnorm(x, set[10], sqrt(set[13]))*set[16] + stats::dnorm(x, set[11], sqrt(set[14]))*set[17] + stats::dnorm(x, set[12], sqrt(set[15]))*set[18]
+            }
+          data.frame("LFC" = c(x, x), "Density" = c(y_geneset, y_background), "Set" = c(rep(names(results())[ct], length(x)), rep("Background", length(x))), "Cell" = c(rep(names(results())[ct], length(x)*2)))
         })
         y <- do.call("rbind", y)
       } else {
@@ -71,17 +73,17 @@ mremApp <- function(){
     dist.plot <- shiny::reactive({
 
       if(numrow() != 0){
-        p <- ggplot2::ggplot(data = mixture(), ggplot2::aes(LFC, Density, group = Set)) +
+        p <- ggplot2::ggplot(data = mixture(), ggplot2::aes(LFC, Density, group = Set, colour = Set)) +
           # geom_line() +
           ggplot2::xlab("Log Fold Change") +
           ggplot2::ylab("Density") +
           ggplot2::geom_area(ggplot2::aes( group = Set, fill = Set), alpha = 0.6, position = "identity") +
-          #scale_color_manual(values = natparks.pals(name = "SmokyMtns", n = length(unique(mixture()$Set)), type = "discrete")) +
+          ggplot2::scale_color_brewer(palette = input$pal2) +
           ggplot2::scale_fill_brewer(palette = input$pal2) +
           ggplot2::theme_minimal() +
           ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
                 legend.position = "bottom") +
-          ggplot2::facet_wrap(ggplot2::vars(Set), nrow = numrow())
+          ggplot2::facet_wrap(ggplot2::vars(Cell), nrow = numrow())
       } else {
         p <- ggplot2::ggplot(data = mixture(), ggplot2::aes(LFC, Density, group = Set)) +
           # geom_line() +
