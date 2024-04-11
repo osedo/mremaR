@@ -39,8 +39,8 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
   mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
 
-  var2 <- var(effect[effect >= log2(threshold)])
-  var3 <- var(effect[effect <= -log2(threshold)])
+  var2 <- stats::var(effect[effect >= log2(threshold)])
+  var3 <- stats::var(effect[effect <= -log2(threshold)])
   var2 <- ifelse(is.nan(var2), 0.5, var2)
   var3 <- ifelse(is.nan(var3), 0.5, var3)
 
@@ -213,8 +213,8 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
         mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
 
-        var2 <- var(effect_inset[effect_inset >= log2(threshold)])
-        var3 <- var(effect_inset[effect_inset <= -log2(threshold)])
+        var2 <- stats::var(effect_inset[effect_inset >= log2(threshold)])
+        var3 <- stats::var(effect_inset[effect_inset <= -log2(threshold)])
         var2 <- ifelse(is.numeric(var2), 0.5, var2)
         var3 <- ifelse(is.numeric(var3), 0.5, var3)
 
@@ -238,8 +238,8 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
         mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
 
-        var2 <- var(effect_outset[effect_outset >= log2(threshold)])
-        var3 <- var(effect_outset[effect_outset <= -log2(threshold)])
+        var2 <- stats::var(effect_outset[effect_outset >= log2(threshold)])
+        var3 <- stats::var(effect_outset[effect_outset <= -log2(threshold)])
         var2 <- ifelse(is.numeric(var2), 0.5, var2)
         var3 <- ifelse(is.numeric(var3), 0.5, var3)
 
@@ -315,8 +315,8 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         mu5 <- ifelse(is.nan(mu5), log2(threshold), mu5)
         mu6 <- ifelse(is.nan(mu6), -log2(threshold), mu6)
 
-        var2 <- var(effect_set[effect_set >= log2(threshold)])
-        var3 <- var(effect_set[effect_set <= -log2(threshold)])
+        var2 <- stats::var(effect_set[effect_set >= log2(threshold)])
+        var3 <- stats::var(effect_set[effect_set <= -log2(threshold)])
         var2 <- ifelse(is.nan(var2), 0.5, var2)
         var3 <- ifelse(is.nan(var3), 0.5, var3)
 

@@ -1,5 +1,5 @@
 Package: mremaR
-Title: Mixture of random-effect meta-analysis for gene set analysis.
+Title: Mixture of random-effect meta-analysis for gene set analysis
 Version: 0.0.0.9000
 Authors@R: 
     person("Dónal", "O'Shea", , "osedo@tcd.ie", role = c("aut", "cre"),
