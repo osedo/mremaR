@@ -29,8 +29,7 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
-    remotes,
-    devtools
+    CARseq
 Remotes: github::chongjin/CARseq
 Config/testthat/edition: 3
 Depends: 
