@@ -100,7 +100,7 @@ mremApp <- function(){
     })
 
     output$distPlot <- plotly::renderPlotly({
-      dist.plot() %>% plotly::add_text(text = "Hiya")
+      dist.plot()
     })
 
     output$export = shiny::downloadHandler(
