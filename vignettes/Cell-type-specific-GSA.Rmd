@@ -22,10 +22,8 @@ library(mremaR)
 Here we will show a simple workflow for carrying out cell type-specific gene set analysis (CT-GSA). First let's load the CAR-seq package which is designed for carrying out cell type-specific differential expression analysis. 
 
 ```{r}
-if(!require(CARseq)){
-    devtools::install_github("chongjin/CARseq")
-    library(CARseq)
-}
+#devtools::install_github("chongjin/CARseq")
+library(CARseq)
 ```
 
 Now we will simulate gene expression for samples which are a mixture of six different cell types. This defaults to 1,000 genes in 100 cases and 100 controls. In each cell type 5% of genes are assigned a log-fold-change drawn from a normal distribution with a mean of plus/minus 4 and a standard deviation of 0.2. 
