@@ -23,7 +23,7 @@ Here we will show a simple workflow for carrying out cell type-specific gene set
 
 ```
 if(!require(CARseq)){
-    devtools::install_github("Sun-lab/CARseq")
+    devtools::install_github("chongjin/CARseq")
     library(CARseq)
 }
 ```
