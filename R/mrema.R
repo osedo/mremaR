@@ -36,13 +36,13 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   alpha_1 <- 1 - (alpha_2 + alpha_3)
   mu2 <- mean(effect[effect >= log2(threshold)])
   mu3 <- mean(effect[effect <= -log2(threshold)])
-  mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
-  mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
+  mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+  mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
 
   var2 <- stats::var(effect[effect >= log2(threshold)])
   var3 <- stats::var(effect[effect <= -log2(threshold)])
-  var2 <- ifelse(is.nan(var2), 0.5, var2)
-  var3 <- ifelse(is.nan(var3), 0.5, var3)
+  var2 <- ifelse(is.finite(var2), var2, 0.5)
+  var3 <- ifelse(is.finite(var3), var3, 0.5)
 
   # fit ggm to all genes without regard for set membership
   starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3)))
@@ -177,7 +177,31 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         effect_set <- dplyr::pull(set_specific_post, 2)
         variance_set <- dplyr::pull(set_specific_post, 3)
         set <- set_specific_post$set
-        set_mixture <- .EM_1FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
+
+        # get initial estimates of params from data
+        alpha_3 <- sum(stats::pnorm(-log2(threshold), effect_set[set == 1], sqrt(variance_set[set == 1]), lower.tail = TRUE))/sum(set == 1)
+        alpha_2 <- sum(stats::pnorm(log2(threshold), effect_set[set == 1], sqrt(variance_set[set == 1]), lower.tail = FALSE))/sum(set == 1)
+        alpha_1 <- 1 - (alpha_2 + alpha_3)
+
+        alpha_6 <- sum(stats::pnorm(-log2(threshold), effect_set[set == 0], sqrt(variance_set[set == 0]), lower.tail = TRUE))/sum(set == 0)
+        alpha_5 <- sum(stats::pnorm(log2(threshold), effect_set[set == 0], sqrt(variance_set[set == 0]), lower.tail = FALSE))/sum(set == 0)
+        alpha_4 <- 1 - (alpha_5 + alpha_6)
+
+        mu2 <- mean(effect_set[effect_set >= log2(threshold)])
+        mu3 <- mean(effect_set[effect_set <= -log2(threshold)])
+        mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+        mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
+
+
+        var2 <- stats::var(effect_set[effect_set >= log2(threshold)])
+        var3 <- stats::var(effect_set[effect_set <= -log2(threshold)])
+        var2 <- ifelse(is.finite(var2), var2, 0.5)
+        var3 <- ifelse(is.finite(var3), var3, 0.5)
+
+        starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6)))
+
+
+        set_mixture <- .EM_1FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
         loglike_set_genes <- set_mixture$loglike
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
@@ -210,13 +234,14 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         alpha_1 <- 1 - (alpha_2 + alpha_3)
         mu2 <- mean(effect_inset[effect_inset >= log2(threshold)])
         mu3 <- mean(effect_inset[effect_inset <= -log2(threshold)])
-        mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
-        mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
+        mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+        mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
+
 
         var2 <- stats::var(effect_inset[effect_inset >= log2(threshold)])
         var3 <- stats::var(effect_inset[effect_inset <= -log2(threshold)])
-        var2 <- ifelse(is.numeric(var2), 0.5, var2)
-        var3 <- ifelse(is.numeric(var3), 0.5, var3)
+        var2 <- ifelse(is.finite(var2), var2, 0.5)
+        var3 <- ifelse(is.finite(var3), var3, 0.5)
 
         # fit ggm to all genes without regard for set membership
         starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3)))
@@ -235,13 +260,13 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         alpha_1 <- 1 - (alpha_2 + alpha_3)
         mu2 <- mean(effect_outset[effect_outset >= log2(threshold)])
         mu3 <- mean(effect_outset[effect_outset <= -log2(threshold)])
-        mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
-        mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
+        mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+        mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
 
         var2 <- stats::var(effect_outset[effect_outset >= log2(threshold)])
         var3 <- stats::var(effect_outset[effect_outset <= -log2(threshold)])
-        var2 <- ifelse(is.numeric(var2), 0.5, var2)
-        var3 <- ifelse(is.numeric(var3), 0.5, var3)
+        var2 <- ifelse(is.finite(var2), var2, 0.5)
+        var3 <- ifelse(is.finite(var3), var3, 0.5)
 
         # fit ggm to all genes without regard for set membership
         starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3)))
@@ -271,7 +296,30 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
         effect_set <- dplyr::pull(set_specific_post, 2)
         variance_set <- dplyr::pull(set_specific_post, 3)
         set <- set_specific_post$set
-        set_mixture <- .EM_2FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = all_genes_mixture)
+
+        # get initial estimates of params from data
+        alpha_3 <- sum(stats::pnorm(-log2(threshold), effect_set[set == 1], sqrt(variance_set[set == 1]), lower.tail = TRUE))/sum(set == 1)
+        alpha_2 <- sum(stats::pnorm(log2(threshold), effect_set[set == 1], sqrt(variance_set[set == 1]), lower.tail = FALSE))/sum(set == 1)
+        alpha_1 <- 1 - (alpha_2 + alpha_3)
+
+        alpha_6 <- sum(stats::pnorm(-log2(threshold), effect_set[set == 0], sqrt(variance_set[set == 0]), lower.tail = TRUE))/sum(set == 0)
+        alpha_5 <- sum(stats::pnorm(log2(threshold), effect_set[set == 0], sqrt(variance_set[set == 0]), lower.tail = FALSE))/sum(set == 0)
+        alpha_4 <- 1 - (alpha_5 + alpha_6)
+
+        mu2 <- mean(effect_set[effect_set >= log2(threshold)])
+        mu3 <- mean(effect_set[effect_set <= -log2(threshold)])
+        mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+        mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
+
+
+        var2 <- stats::var(effect_set[effect_set >= log2(threshold)])
+        var3 <- stats::var(effect_set[effect_set <= -log2(threshold)])
+        var2 <- ifelse(is.finite(var2), var2, 0.5)
+        var3 <- ifelse(is.finite(var3), var3, 0.5)
+
+        starting.params <- list("param" = list("mu" = c(0, mu2, mu3), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6)))
+
+        set_mixture <- .EM_2FP_fixed(effect_set, variance_set, set, comp1_var_max, threshold = threshold, overlap = overlap, starting = starting.params)
         loglike_set_genes <- set_mixture$loglike
         set_parameters <- set_mixture$param
         ll_trace <- set_mixture$ll.vector
@@ -306,19 +354,20 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
 
         mu2 <- mean(effect_set[set == 1][effect_set[set == 1] >= log2(threshold)])
         mu3 <- mean(effect_set[set == 1][effect_set[set == 1] <= -log2(threshold)])
-        mu2 <- ifelse(is.nan(mu2), log2(threshold), mu2)
-        mu3 <- ifelse(is.nan(mu3), -log2(threshold), mu3)
-
+        mu2 <- ifelse(is.finite(mu2), mu2, log2(threshold))
+        mu3 <- ifelse(is.finite(mu3), mu3, -log2(threshold))
 
         mu5 <- mean(effect_set[set == 0][effect_set[set == 0] >= log2(threshold)])
         mu6 <- mean(effect_set[set == 0][effect_set[set == 0] <= -log2(threshold)])
-        mu5 <- ifelse(is.nan(mu5), log2(threshold), mu5)
-        mu6 <- ifelse(is.nan(mu6), -log2(threshold), mu6)
+        mu5 <- ifelse(is.finite(mu5), mu5, log2(threshold))
+        mu6 <- ifelse(is.finite(mu6), mu6, -log2(threshold))
+
 
         var2 <- stats::var(effect_set[effect_set >= log2(threshold)])
         var3 <- stats::var(effect_set[effect_set <= -log2(threshold)])
-        var2 <- ifelse(is.nan(var2), 0.5, var2)
-        var3 <- ifelse(is.nan(var3), 0.5, var3)
+        var2 <- ifelse(is.finite(var2), var2, 0.5)
+        var3 <- ifelse(is.finite(var3), var3, 0.5)
+
 
         # fit ggm to all genes without regard for set membership
         starting.params <- list("param" = list("mu" = c(0, mu2, mu3, 0, mu5, mu6), "var" = c(comp1_var_max, var2, var3), "alpha" = c(alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6)))
@@ -397,7 +446,7 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   for (i in 1:n) {
     if (i == 1) {
       # Initialization
-      e.step.set <- .e_step_set_iter(effect_set, variance_set, set, starting$param$mu, starting$param$var, c(starting$param$alpha, starting$param$alpha))
+      e.step.set <- .e_step_set_iter(effect_set, variance_set, set, starting$param$mu, starting$param$var, starting$param$alpha)
 
       m.step.set <- .m_step_set_iter_fixed(effect_set, variance_set, set, starting$param$var, iter, e.step.set[["posterior_df"]], comp1_var_max, threshold = threshold, overlap = overlap)
       cur.loglik.set <- e.step.set[["loglik"]]
@@ -793,7 +842,7 @@ mrema <- function(postdata, raw.gs, DF = NULL, threshold = NULL, ncores = 1, ove
   for (i in 1:n) {
     if (i == 1) {
       # Initialization
-      e.step.set <- .e_step_set_iter(effect_set, variance_set, set, starting$param$mu, starting$param$var, c(starting$param$alpha, starting$param$alpha))
+      e.step.set <- .e_step_set_iter(effect_set, variance_set, set, starting$param$mu, starting$param$var, starting$param$alpha)
 
       m.step.set <- .m_step_set_iter_fixed_2DF(effect_set, variance_set, set, starting$param$var, iter, e.step.set[["posterior_df"]], comp1_var_max, threshold = threshold, overlap = overlap)
       cur.loglik.set <- e.step.set[["loglik"]]

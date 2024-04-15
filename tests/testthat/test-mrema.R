@@ -57,6 +57,7 @@ test_that("EM Algorithm tests", {
   expect_equal(res$param$alpha,  c(0.8, .1, .1), tolerance = "6e")
 
   set <- c(rep(0, 1000), rep(1, 1000))
+  starting.params <- list("param" = list("mu" = c(0, 2, -2), "var" = c(0.01, 0.5, 0.5), "alpha" = c(.5, .25, .25, 0.5, 0.25, 0.25)))
   res <- .EM_2FP_fixed(em.tests$postdata$effect, em.tests$postdata$variance, set, 0.01, threshold = 1.5, overlap = 0.25, starting = starting.params)
   expect_equal(res$loglike,  1627.859, tolerance = "6e")
   expect_equal(res$param$mu,  c(0, 1, -1), tolerance = "6e")
