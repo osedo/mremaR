@@ -2,6 +2,7 @@
 
 export("%>%")
 export(CTexpSimulation)
+export(REtest)
 export(mremApp)
 export(mrema)
 importFrom(magrittr,"%>%")
