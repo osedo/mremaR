@@ -15,6 +15,8 @@ REtest <- function(estimates, lfc_thresh, gene_set){
   gene_set <- lapply(gene_set, function(x) x[x %in% estimates$genes])
   set.size <- lengths(gene_set)
   set.weights <- unlist(lapply(gene_set, function(x)mean(weight[estimates$genes %in% x])))
+
+  index <- lapply(gene_set, function(x) which(estimates$genes %in% x))
   # weight perms
   m <- replicate(100000, sample(weight, max(set.size)))
   set.size <- as.character(set.size)
@@ -28,5 +30,7 @@ REtest <- function(estimates, lfc_thresh, gene_set){
     #stats::pnorm(set.weights[x], perm.sizes[[set.size[x]]][1], perm.sizes[[set.size[x]]][2], lower.tail = FALSE)
     1 - truncnorm::ptruncnorm(q = set.weights[x], a = 0, mean = perm.sizes[[set.size[x]]][1], sd = perm.sizes[[set.size[x]]][2])
   }))
-  data.frame("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "P.value" = p.val, row.names = NULL)
+  results <- tibble::tibble("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "P.value" = p.val, "Index" = index, row.names = NULL)
+ # res <- cbind(res, index)
+  list("results" = results, "estimates" = estimates)
 }
