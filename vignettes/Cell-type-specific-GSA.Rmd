@@ -29,62 +29,82 @@ library(CARseq)
 Now we will simulate gene expression for samples which are a mixture of six different cell types. This defaults to 1,000 genes in 100 cases and 100 controls. In each cell type 5% of genes are assigned a log-fold-change drawn from a normal distribution with a mean of plus/minus 4 and a standard deviation of 0.2. 
 
 ```{r}
-sim <- CTexpSimulation()
-#sim$bulk.expression[c(1:5),c(1:5)] # bulk expression counts
-#sim$ols.mixture.estimate[c(1:5),] # cell type proportion estimates 
-#table(sim$trait) # sample traits
+sims <- CTexpSimulation(g = 1000, n = 100, p = 1, m_lfc = 0, sd_lfc = 1)
+sims$bulk.expression[c(1:5),c(1:5)] # bulk expression counts
+sims$ols.mixture.estimate[c(1:5),] # cell type proportion estimates 
+table(sims$trait) # sample traits
 ```
 
 These outputs can then be passed to the CAR-seq package. The important results for us are the shrunken_lfc and shrunken_lfcSE matrices
 
 ```{r}
 # this will take a minute or two to run
-#res <- run_CARseq(
-#  count_matrix = sim$bulk.expression,
-#  cellular_proportions = sim$ols.mixture.estimate,
-#  groups = sim$trait,
-#  cores = 1
-#)
+res <- run_CARseq(
+  count_matrix = sims$bulk.expression,
+  cellular_proportions = sims$ols.mixture.estimate,
+  groups = sims$trait,
+  cores = 1
+)
 ```
 
 Let's simulate a few gene sets
 ```{r}
 # a few power gene sets, gs1 enriched for DE genes in cellType1, same for gs2 and so on
 # we will give sets of 100 approx 20% DE gene
-#gs.power <- lapply(c(1:6), function(x){
-#  paste0("gene.", 
-         # sample DE genes
-#         c(sample(which(sim$simulated.lfc[,x] != 0), 30),
-         # sample non DE genes  
-#           sample(which(sim$simulated.lfc[,x] == 0), 70)))
-#})
+g <- 1000
+gs.power <- lapply(c(1:6), function(x){
+  ct_de <- which(abs(sims$simulated.lfc[,x]) > log2(2.5))
+  ct_nonde <- c(1:g)[!c(1:g) %in% ct_de]
+  ct_de <- paste0("gene.", ct_de)
+  ct_nonde <- paste0("gene.", ct_nonde)
+  genes_per_set <- 100
+  p <- mean(abs(sims$simulated.lfc[,x]) > log2(2.5))
+  enrichment <- 3
+  c(sample(ct_de, genes_per_set*enrichment*p), sample(ct_nonde, (genes_per_set-genes_per_set*enrichment*p)))
+  
+})
 
 # random gene sets
-#gs.null <- lapply(c(7:20), function(x){
-#  paste0("gene.", sample.int(1000, 100))
-#})
+gs.null <- lapply(c(7:20), function(x){
+  paste0("gene.", sample.int(1000, 100))
+})
 
-#gs <- c(gs.power, gs.null)
-#names(gs) <- paste0("gs", 1:20)
+gs <- c(gs.power, gs.null)
+names(gs) <- paste0("gs", 1:20)
 ```
 
 
 Let's run mrema() on all cell-types
 
 ```{r}
-#mrema.res <- lapply(c(1:6), function(ct){
-#  postdata <- data.frame("Ensembl" = rownames(res$shrunken_lfcSE), "effect" = res$shrunken_lfc[,ct], "variance" = res$shrunken_lfcSE[,ct]^2, "pval" = res$p[,ct])
-#  mrema_res <- mrema(postdata = postdata, raw.gs = gs, threshold = 1.5, DF = 4, ncores = 1)
-#  mrema_res
-#  })
-#names(mrema.res) <- colnames(res$p)
-#saveRDS(mrema.res, file = "sample.RDS")
+mrema.res <- lapply(c(1:6), function(ct){
+  postdata <- data.frame("Ensembl" = rownames(res$shrunken_lfcSE), "effect" = res$shrunken_lfc[,ct], "variance" = res$shrunken_lfcSE[,ct]^2, "pval" = res$p[,ct])
+  mrema_res <- mrema(postdata = postdata, raw.gs = gs, threshold = 2, DF = 4, ncores = 1)
+  mrema_res
+  })
+names(mrema.res) <- colnames(res$p)
+saveRDS(mrema.res, file = "samplepara.RDS")
 ```
+
+
+
+```{r}
+full.gsa <- lapply(c(1:6), function(ct){
+  data <- data.frame("genes" = rownames(res$shrunken_lfc), "lfc" = res$shrunken_lfc[,ct], "lfcSE" = res$shrunken_lfcSE[,ct])
+  gsa.res <- REtest(data, log2(2), gs)
+  gsa.res
+  
+})
+names(full.gsa) <- colnames(res$p)[c(1:6)]
+saveRDS(full.gsa, file = "samplenonpara.RDS")
+```
+
 
 We can now launch the shiny app to investigate our results
 
 ```{r eval=FALSE}
 #mremApp()
+#REshine()
 ```
 
 
