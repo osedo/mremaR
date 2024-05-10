@@ -8,9 +8,17 @@
 #'
 #' @export
 
-REtest <- function(estimates, lfc_thresh, gene_set){
+REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
   estimates <- estimates[stats::complete.cases(estimates),]
+
+  if(type == "DE"){
   weight <- stats::pnorm(-lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = TRUE) + stats::pnorm(lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = FALSE)
+  } else if(type == "upreg"){
+    weight <- stats::pnorm(lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = FALSE)
+  } else if(type == "downreg"){
+    weight <- stats::pnorm(-lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = TRUE)
+  }
+
   # check gene sets
   gene_set <- lapply(gene_set, function(x) x[x %in% estimates$genes])
   set.size <- lengths(gene_set)
