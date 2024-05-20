@@ -3,6 +3,7 @@
 #' @param estimates A three column dataframe with columns corresponding to gene name, lfc and lfcSE, respectively
 #' @param lfc_thresh The log2-foldchange above which a gene is considered differentially expressed.
 #' @param gene_set A list of named gene sets.
+#' @param type Which test to conduct, for differential expression, upregulation, downregulation, "DE", "upreg" and "downreg" respectively
 #'
 #' @returns A data.frame with gene set name, set size, proportion of distribution above the threshold and p-value.
 #'
@@ -38,7 +39,14 @@ REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
     #stats::pnorm(set.weights[x], perm.sizes[[set.size[x]]][1], perm.sizes[[set.size[x]]][2], lower.tail = FALSE)
     1 - truncnorm::ptruncnorm(q = set.weights[x], a = 0, mean = perm.sizes[[set.size[x]]][1], sd = perm.sizes[[set.size[x]]][2])
   }))
-  results <- tibble::tibble("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "P.value" = p.val, "Index" = index, row.names = NULL)
- # res <- cbind(res, index)
+  perm.p.val <- unlist(lapply(c(1:length(gene_set)), function(x){
+    s <- length(gene_set[[x]])
+    mean(colMeans(m[1:s,]) >= set.weights[x])
+  }))
+
+
+  results <- tibble::tibble("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "P.value" = p.val, "Perm.p.value" = perm.p.val, "Index" = index, row.names = NULL)
+
+  # res <- cbind(res, index)
   list("results" = results, "estimates" = estimates)
 }

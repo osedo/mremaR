@@ -4,7 +4,7 @@
 \alias{REtest}
 \title{Run gene set analysis using Random-Effect permutations}
 \usage{
-REtest(estimates, lfc_thresh, gene_set)
+REtest(estimates, lfc_thresh, gene_set, type = "DE")
 }
 \arguments{
 \item{estimates}{A three column dataframe with columns corresponding to gene name, lfc and lfcSE, respectively}
@@ -12,6 +12,8 @@ REtest(estimates, lfc_thresh, gene_set)
 \item{lfc_thresh}{The log2-foldchange above which a gene is considered differentially expressed.}
 
 \item{gene_set}{A list of named gene sets.}
+
+\item{type}{Which test to conduct, for differential expression, upregulation, downregulation, "DE", "upreg" and "downreg" respectively}
 }
 \value{
 A data.frame with gene set name, set size, proportion of distribution above the threshold and p-value.
