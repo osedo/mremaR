@@ -24,7 +24,8 @@ REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
   gene_set <- lapply(gene_set, function(x) x[x %in% estimates$genes])
   set.size <- lengths(gene_set)
   set.weights <- unlist(lapply(gene_set, function(x)mean(weight[estimates$genes %in% x])))
-
+  background.weights <- unlist(lapply(gene_set, function(x)mean(weight[!(estimates$genes %in% x)])))
+  enrichment <- set.weights/background.weights
   index <- lapply(gene_set, function(x) which(estimates$genes %in% x))
   # weight perms
   m <- replicate(100000, sample(weight, max(set.size)))
@@ -45,7 +46,7 @@ REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
   }))
 
 
-  results <- tibble::tibble("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "P.value" = p.val, "Perm.p.value" = perm.p.val, "Index" = index, row.names = NULL)
+  results <- tibble::tibble("Gene.Set" = names(gene_set), "Set.Size" = as.numeric(set.size), "Prop.DE" = set.weights, "Prop.DE.background" = background.weights, "Enrichment" = enrichment, "P.value" = p.val, "Perm.p.value" = perm.p.val, "Index" = index, row.names = NULL)
 
   # res <- cbind(res, index)
   list("results" = results, "estimates" = estimates)
