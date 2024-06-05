@@ -31,7 +31,7 @@ REshine <- function(){
                                max = length(results()))
     })
 
-    table <- shiny::reactive(results()[[input$CellType]]$results[,c(1:4)] %>% DT::datatable(selection = 'single') %>% DT::formatSignif(columns = c("Prop.DE", "P.value"), digits = 4))
+    table <- shiny::reactive(results()[[input$CellType]]$results[,c(1:3,6)] %>% DT::datatable(selection = 'single') %>% DT::formatSignif(columns = c("Prop.DE", "P.value"), digits = 4))
     output$dTable <-  DT::renderDT(table())
     all.ct <- shiny::reactive(input$across)
     export <- shiny::reactive(input$export)
