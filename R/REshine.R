@@ -53,7 +53,7 @@ REshine <- function(){
         s.max <- min(c(max(y_inset), max(y_outset)))
         t.max <- max(c(max(y_inset), max(y_outset)))
         density <- data.frame("LFC" = c(x, x), "Density" = c(y_inset, y_outset), "Set" = c(rep(results()[[ct]]$results$Gene.Set[input$dTable_rows_selected], length(x)), rep("Background genes", length(x))), "Cell" = c(rep(names(results())[ct], length(x)*2)), "pval" = rep(results()[[ct]]$results$P.value[input$dTable_rows_selected], length(x)*2), "Weight.DE" = rep(results()[[ct]]$results$Prop.DE[input$dTable_rows_selected], length(x)*2))
-        density$text <- paste0("Set: ", density$Set, "<br>", "Cell Type: ", density$Cell, "<br>", "P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))
+        #density$text <- paste0("P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))#paste0("Set: ", density$Set, "<br>", "Cell Type: ", density$Cell, "<br>", "P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))
         density$Density[which(density$LFC > -input$thresh & density$LFC < input$thresh)] <- 0
         density
       })
@@ -68,15 +68,22 @@ REshine <- function(){
     dist.plot <- shiny::reactive({
       if(all.ct()){
         pd <- do.call("rbind", mixture())
-        pl <- ggplot2::ggplot(data = pd, ggplot2::aes(LFC, Density, group = Set, colour = Set, text = text)) +
+        pl <- ggplot2::ggplot(data = pd, ggplot2::aes(LFC, Density, group = Set, colour = Set)) +
           ggplot2::xlab("Log Fold Change") +
           ggplot2::ylab("Density") +
           ggplot2::geom_area(ggplot2::aes( group = Set, fill = Set), alpha = 0.6, position = "identity") +
           ggplot2::scale_color_brewer(palette = input$pal2) +
           ggplot2::scale_fill_brewer(palette = input$pal2) +
+          #ggplot2::annotate("text", x = (max(pd$LFC) - 1), y = max(pd$Density) - max(pd$Density)*0.1, label = paste0("P-value - ", pd$pval)) +
           ggplot2::facet_wrap(ggplot2::vars(Cell), nrow = input$numrow) +
           ggplot2::theme_minimal() +
           ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5), legend.position = "bottom")
+
+        text_data <- data.frame("label" = paste0("P-value - ", unique(signif(pd$pval, 3))), "Cell" = unique(pd$Cell))
+        text_data$Set <- pd$Set[1]
+        #text_data <- data.frame("label" = unlist(lapply(paste0("P-value -", unique(signif(pd$pval, 4))), function(x) rep(x, nrow(pd)/length(unique(pd$Cell))))), "Cell" = pd$Cell)
+        #print(text_data)
+        pl <- pl + ggplot2::geom_text(size = 2.5, data = text_data, colour = "black", mapping = ggplot2::aes((max(pd$LFC) - 2), y = max(pd$Density) - max(pd$Density)*0.1, label = label))
 
       } else {
         pd <- mixture()[[input$CellType]]
@@ -87,6 +94,7 @@ REshine <- function(){
           ggplot2::scale_color_brewer(palette = input$pal2) +
           ggplot2::scale_fill_brewer(palette = input$pal2) +
           ggplot2::theme_minimal() +
+          ggplot2::annotate("text", x = (max(pd$LFC) - 2), y = max(pd$Density) - max(pd$Density)*0.1, label = unique(paste0("P-value - ", signif(pd$pval, 3))), size = 2.5) +
           ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5), legend.position = "bottom")
       }
 
@@ -101,8 +109,9 @@ REshine <- function(){
     })
 
     output$distPlotly <- plotly::renderPlotly({
-      plotly::ggplotly(dist.plot(), tooltip = "text") %>%
-        plotly::layout(legend = list(orientation = 'h', x = 0.25, y = -.25))
+      plotly::ggplotly(dist.plot()) %>%
+        plotly::layout(legend = list(orientation = 'h', x = 0.25, y = -.25)) %>%
+        plotly::style(hoverinfo = 'none')
     })
 
     output$export = shiny::downloadHandler(
