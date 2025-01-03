@@ -4,12 +4,13 @@
 #' @param lfc_thresh The log2-foldchange above which a gene is considered differentially expressed.
 #' @param gene_set A list of named gene sets.
 #' @param type Which test to conduct, for differential expression, upregulation, downregulation, "DE", "upreg" and "downreg" respectively
+#' @param min.size Numeric value for minimum gene set size, defaults to 5
 #'
 #' @returns A data.frame with gene set name, set size, proportion of distribution above the threshold and p-value.
 #'
 #' @export
 
-REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
+REtest <- function(estimates, lfc_thresh, gene_set, type = "DE", min.size = 5){
   estimates <- estimates[stats::complete.cases(estimates),]
 
   if(type == "DE"){
@@ -23,9 +24,13 @@ REtest <- function(estimates, lfc_thresh, gene_set, type = "DE"){
   # check gene sets
   gene_set <- lapply(gene_set, function(x) x[x %in% estimates$genes])
   set.size <- lengths(gene_set)
+  gene_set <- gene_set[set.size >= min.size]
+  set.size <- lengths(gene_set)
   set.weights <- unlist(lapply(gene_set, function(x)mean(weight[estimates$genes %in% x])))
   background.weights <- unlist(lapply(gene_set, function(x)mean(weight[!(estimates$genes %in% x)])))
   enrichment <- set.weights/background.weights
+
+
   index <- lapply(gene_set, function(x) which(estimates$genes %in% x))
   # weight perms
   m <- replicate(100000, sample(weight, max(set.size)))
