@@ -12,7 +12,7 @@
 
 REtest <- function(estimates, lfc_thresh, gene_set, type = "DE", min.size = 5){
   estimates <- estimates[stats::complete.cases(estimates),]
-
+# testing
   if(type == "DE"){
   weight <- stats::pnorm(-lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = TRUE) + stats::pnorm(lfc_thresh, estimates$lfc, estimates$lfcSE, lower.tail = FALSE)
   } else if(type == "upreg"){
