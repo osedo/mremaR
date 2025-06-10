@@ -39,9 +39,15 @@ REshine <- function(){
     numrow <- shiny::reactive(input$numrow)
     mixture <- shiny::reactive({
       shiny::req(input$dTable_rows_selected, input$CellType)
+      i <- results()[[input$CellType]]$results$Gene.Set[input$dTable_rows_selected]
       x <- seq(input$Xrange[1], input$Xrange[2], by = 0.01) # unique(c(seq(input$Xrange[1], -input$thresh, by = 0.01), seq(input$thresh, input$Xrange[2], by = 0.01)))#
       y <- lapply(seq_along(results()), function(ct) {
-        inset_index <- results()[[ct]]$results$Index[[input$dTable_rows_selected]]
+
+        if(i %in% results()[[ct]]$results$Gene.Set){
+          i <- which(results()[[ct]]$results$Gene.Set == i)
+
+
+        inset_index <- results()[[ct]]$results$Index[[i]]
         outset_index <- c(1:nrow(results()[[ct]]$results))[-inset_index]
         y_outset <- unlist(lapply(x, function(x_i){
           mean(stats::dnorm(x_i, results()[[ct]]$estimates$lfc[outset_index], results()[[ct]]$estimates$lfcSE[outset_index]))
@@ -52,10 +58,12 @@ REshine <- function(){
         f.max <- max(c(y_inset[which(x == 0) + 1], y_outset[which(x == 0) + 1]))
         s.max <- min(c(max(y_inset), max(y_outset)))
         t.max <- max(c(max(y_inset), max(y_outset)))
-        density <- data.frame("LFC" = c(x, x), "Density" = c(y_inset, y_outset), "Set" = c(rep(results()[[ct]]$results$Gene.Set[input$dTable_rows_selected], length(x)), rep("Background genes", length(x))), "Cell" = c(rep(names(results())[ct], length(x)*2)), "pval" = rep(results()[[ct]]$results$P.value[input$dTable_rows_selected], length(x)*2), "Weight.DE" = rep(results()[[ct]]$results$Prop.DE[input$dTable_rows_selected], length(x)*2))
+        density <- data.frame("LFC" = c(x, x), "Density" = c(y_inset, y_outset), "Set" = c(rep(results()[[ct]]$results$Gene.Set[i], length(x)), rep("Background genes", length(x))), "Cell" = c(rep(names(results())[ct], length(x)*2)), "pval" = rep(results()[[ct]]$results$P.value[i], length(x)*2), "Weight.DE" = rep(results()[[ct]]$results$Prop.DE[i], length(x)*2))
         #density$text <- paste0("P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))#paste0("Set: ", density$Set, "<br>", "Cell Type: ", density$Cell, "<br>", "P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))
         density$Density[which(density$LFC > -input$thresh & density$LFC < input$thresh)] <- 0
+        print(head(density))
         density
+        }
       })
       #y <- do.call("rbind", y)
 
