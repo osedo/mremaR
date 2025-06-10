@@ -61,7 +61,7 @@ REshine <- function(){
         density <- data.frame("LFC" = c(x, x), "Density" = c(y_inset, y_outset), "Set" = c(rep(results()[[ct]]$results$Gene.Set[i], length(x)), rep("Background genes", length(x))), "Cell" = c(rep(names(results())[ct], length(x)*2)), "pval" = rep(results()[[ct]]$results$P.value[i], length(x)*2), "Weight.DE" = rep(results()[[ct]]$results$Prop.DE[i], length(x)*2))
         #density$text <- paste0("P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))#paste0("Set: ", density$Set, "<br>", "Cell Type: ", density$Cell, "<br>", "P-value: ", signif(density$pval, 4), "<br>", "DE weight: ", signif(density$Weight.DE, 4))
         density$Density[which(density$LFC > -input$thresh & density$LFC < input$thresh)] <- 0
-        print(head(density))
+        #print(head(density))
         density
         }
       })
