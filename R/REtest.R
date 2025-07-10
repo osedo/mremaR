@@ -26,6 +26,10 @@ REtest <- function(estimates, lfc_thresh, gene_set, type = "DE", min.size = 5){
   set.size <- lengths(gene_set)
   gene_set <- gene_set[set.size >= min.size]
   set.size <- lengths(gene_set)
+  # exit if no gene sets with enough genes
+  if(max(set.size) < min.size){
+    return('No gene sets with estimates for the minimum number of genes specified (default 5 genes)')
+  }
   set.weights <- unlist(lapply(gene_set, function(x)mean(weight[estimates$genes %in% x])))
   background.weights <- unlist(lapply(gene_set, function(x)mean(weight[!(estimates$genes %in% x)])))
   enrichment <- set.weights/background.weights
